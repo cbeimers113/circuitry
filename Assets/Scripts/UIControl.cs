@@ -4,14 +4,16 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class UIControl : MonoBehaviour
 {
+    private const string TITLE = "Techne v 1.0_alpha";
+
     public GameObject[] buttons;
     public Text selLabel;
+    public Text titleLabel;
 
     private KeyCode[] hotbarKeys;
     
@@ -19,6 +21,8 @@ public class UIControl : MonoBehaviour
 
     public void Start()
     {
+        titleLabel.text = TITLE;
+
         foreach (CompType comp in CompType.components)
         {
             Texture2D texture = Resources.Load<Texture2D>("Textures/Component/" + comp.GetName());

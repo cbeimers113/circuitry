@@ -1,12 +1,7 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.ConstrainedExecution;
-using UnityEditor.Build;
-using UnityEditor.iOS;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.XR.WSA.Input;
 
 public class CircuitComponent : MonoBehaviour
 {

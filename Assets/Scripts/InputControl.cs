@@ -1,7 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEditor.PackageManager.Requests;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class InputControl : MonoBehaviour
 {
