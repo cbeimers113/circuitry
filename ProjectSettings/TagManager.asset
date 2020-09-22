@@ -6,6 +6,7 @@ TagManager:
   tags:
   - EditBoard
   - Display
+  - Manager
   layers:
   - Default
   - TransparentFX

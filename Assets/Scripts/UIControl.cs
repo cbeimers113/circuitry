@@ -1,112 +1,99 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-[RequireComponent(typeof(EventTrigger))]
 public class UIControl : MonoBehaviour
 {
-    public static bool BlockedByUI;
-    public static int numComps;
+    public GameObject[] buttons;
+    public Text selLabel;
 
-    private EventTrigger eventTrigger;
-    private Canvas display;
+    private KeyCode[] hotbarKeys;
+    
+    private int selIndex;
 
-    private static ArrayList buttons;
-    private static ArrayList idleSprites;
-    private static ArrayList hoverSprites;
-    private static ArrayList names;
-
-    private void Start()
+    public void Start()
     {
-        eventTrigger = GetComponent<EventTrigger>();
-        if (eventTrigger != null)
+        foreach (CompType comp in CompType.components)
         {
-            EventTrigger.Entry enterUIEntry = new EventTrigger.Entry();
-            enterUIEntry.eventID = EventTriggerType.PointerEnter;
-            enterUIEntry.callback.AddListener((eventData) => { EnterUI(); });
-            eventTrigger.triggers.Add(enterUIEntry);
+            Texture2D texture = Resources.Load<Texture2D>("Textures/Component/" + comp.GetName());
+            Texture2D texture_on = Resources.Load<Texture2D>("Textures/Component/" + comp.GetName() + "_ON");
 
-            EventTrigger.Entry exitUIEntry = new EventTrigger.Entry();
-            exitUIEntry.eventID = EventTriggerType.PointerExit;
-            exitUIEntry.callback.AddListener((eventData) => { ExitUI(); });
-            eventTrigger.triggers.Add(exitUIEntry);
+            comp.SetTexture(texture, false);
+            comp.SetTexture(texture_on, true);
+            comp.LoadSprites();
         }
 
-        display = GameObject.FindGameObjectWithTag("Display").GetComponent<Canvas>();
-        float width = display.GetComponent<RectTransform>().rect.width;
-        float height = display.GetComponent<RectTransform>().rect.height;
-        float iconScale = 75f;
+        hotbarKeys = new KeyCode[] {
+            KeyCode.BackQuote,
+            KeyCode.Alpha1,
+            KeyCode.Alpha2,
+            KeyCode.Alpha3,
+            KeyCode.Alpha4,
+            KeyCode.Alpha5,
+            KeyCode.Alpha6,
+            KeyCode.Alpha7,
+            KeyCode.Alpha8,
+            KeyCode.Alpha9,
+            KeyCode.Alpha0
+        };
 
-        Texture2D[] loadedTextures = Resources.LoadAll<Texture2D>("Textures/Component/");
-        ArrayList compTextures = new ArrayList();
-        buttons = new ArrayList();
-        hoverSprites = new ArrayList();
-        idleSprites = new ArrayList();
-        names = new ArrayList();
-
-        foreach (Texture2D texture in loadedTextures)
-            if (!texture.name.EndsWith("_ON"))
-                compTextures.Add(texture);
-
-        for (int i = 0; i < compTextures.Count; i++)
-        {
-            Texture2D texture = compTextures[i] as Texture2D;
-            GameObject imgObj = new GameObject(texture.name);
-
-            RectTransform imgTransform = imgObj.AddComponent<RectTransform>();
-            imgTransform.transform.SetParent(display.transform);
-            imgTransform.localScale = Vector3.one;
-            imgTransform.anchoredPosition = new Vector2(width / 2 - iconScale + iconScale / 2, height / 2 - i * iconScale - iconScale / 2);
-            imgTransform.sizeDelta = new Vector2(iconScale, iconScale);
-            buttons.Add(imgObj);
-
-            Image img = imgObj.AddComponent<Image>();
-            img.sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0, 0));
-            idleSprites.Add(img.sprite);
-
-            Texture2D hoverTexture = Resources.Load("Textures/Component/" + texture.name + "_ON", typeof(Texture2D)) as Texture2D;
-            hoverSprites.Add(Sprite.Create(hoverTexture, new Rect(0, 0, hoverTexture.width, hoverTexture.height), new Vector2(0, 0)));
-
-            names.Add(texture.name);
-        }
-
-        numComps = names.Count;
+        Select(0);
     }
 
-    private void Update()
+    public void Update()
     {
-        for (int i = 0; i < buttons.Count; i++)
-        {
-            GameObject button = buttons[i] as GameObject;
-            RectTransform rectTrans = button.GetComponent<RectTransform>();
-            Vector2 localMousePosition = rectTrans.InverseTransformPoint(Input.mousePosition);
-            bool hover = rectTrans.rect.Contains(localMousePosition);
-            bool click = Input.GetMouseButtonDown(0);
+        int index = -1;
+        GameObject selected = EventSystem.current.currentSelectedGameObject;
 
-            if (click && hover)
+        for (int i = 0; i < buttons.Length; i++)
+            if (buttons[i] == selected)
+                index = i;
+
+        if (index != selIndex)
+            Select(index);
+
+        if (Input.anyKeyDown)
+            for (int i = 0; i < hotbarKeys.Length; i++)
             {
-                CircuitComponent.selType = i;
+                if (Input.GetKeyDown(hotbarKeys[i]))
+                {
+                    Select(i);
+                    break;
+                }
+
+                if (Input.GetKeyDown(KeyCode.A))
+                {
+                    if (index != -1 && index > 0)
+                        Select(index - 1);
+                }
+                else if (Input.GetKeyDown(KeyCode.D))
+                {
+                    if (index != -1 && index < buttons.Length - 1)
+                        Select(index + 1);
+                }
             }
+        
+    }
 
-            button.GetComponent<Image>().sprite = ((hover || CircuitComponent.selType == i) ? hoverSprites[i] : idleSprites[i]) as Sprite;
+    private void Select(int index)
+    {
+        if (index < 0 || index >= buttons.Length)
+            return;
+
+        EventSystem.current.SetSelectedGameObject(buttons[index]);
+        CompType comp = CompType.GetCompTypeByName(buttons[index].name.Split('_')[1]);
+        if (comp != null)
+        {
+            CircuitComponent.selType = comp;
+            selLabel.text = EventSystem.current.currentSelectedGameObject.name.Split('_')[1];
         }
-    }
 
-    public static string GetCompName(int index)
-    {
-        return names[index] as string;
-    }
-
-    public void EnterUI()
-    {
-        BlockedByUI = true;
-    }
-
-    public void ExitUI()
-    {
-        BlockedByUI = false;
+        selIndex = index;
     }
 }

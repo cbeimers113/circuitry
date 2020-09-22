@@ -5,7 +5,6 @@ using UnityEngine;
 
 public class CameraControl : MonoBehaviour
 {
-
     private float scroll;
     private float scrollMin;
     private float scrollMax;
@@ -35,18 +34,20 @@ public class CameraControl : MonoBehaviour
         scrollMax = -2;
         startTimeScroll = Time.time;
         startTimeZoom = Time.time;
-        dragSpeedMin = 20;
-        dragSpeedMax = 100;
+        dragSpeedMin = 5;
+        dragSpeedMax = 25;
         dragSpeed = GetDragSpeed();
         dragging = false;
         shift = false;
         zooming = false;
 
         GameObject board = GameObject.FindGameObjectWithTag("EditBoard");
-        xMin = -0.5f;
-        xMax = board.transform.localScale.x - 0.5f;
-        yMin = 0.5f;
-        yMax = board.transform.localScale.y - 0.5f;
+        float b_width = board.transform.localScale.x;
+        float b_height = board.transform.localScale.y;
+        xMin = -0.5f - b_width / 2;
+        xMax = b_width * 2 - 0.5f;
+        yMin = 0.5f - b_height / 2;
+        yMax = b_height * 2 - 0.5f;
     }
 
     void Update()
@@ -71,20 +72,12 @@ public class CameraControl : MonoBehaviour
             {
                 Zoom(true);
             }
-            else if (shift && CircuitComponent.selType > 0)
-            {
-                CircuitComponent.selType--;
-            }
         }
         else if (Input.GetAxis("Mouse ScrollWheel") < 0f)
         {
             if (!shift && scroll > scrollMin)
             {
                 Zoom(false);
-            }
-            else if (shift && CircuitComponent.selType < UIControl.numComps - 1)
-            {
-                CircuitComponent.selType++;
             }
         }
 
