@@ -24,8 +24,9 @@ public class CircuitComponent : MonoBehaviour
     private static bool wiring;
     private static float wireWidth;
 
+    private CircuitComponent[] inputs;
+    private GameObject[] wires;
     private MeshRenderer meshRenderer;
-    private ArrayList inputs;
     private CompType compType;
 
     private bool toggled;
@@ -45,16 +46,31 @@ public class CircuitComponent : MonoBehaviour
         toggled = false;
         hover = false;
         state = false;
-        inputs = new ArrayList();
+        inputs = new CircuitComponent[0];
+        wires = new GameObject[0];
     }
 
     public void Update()
     {
-        if (compType == CompType.COMP_DRAIN)
+        if (MouseInputUIBlocker.BlockedByUI || GameObject.FindGameObjectWithTag("EditBoard").GetComponent<Board>().IsUIOpen())
+        {
+            Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+            return;
+        }
+
+        if (compType == CompType.DRAIN)
             GetOutput();
 
-        if (EventSystem.current.IsPointerOverGameObject())
-            return;
+        for (int i = 0; i < inputs.Length; i++)
+            if (inputs[i] != null && inputs[i].compType == null)
+            {
+                inputs[i] = null;
+                if (wires[i] != null)
+                {
+                    Destroy(wires[i]);
+                    wires[i] = null;
+                }
+            }
 
         if (hover)
         {
@@ -68,8 +84,7 @@ public class CircuitComponent : MonoBehaviour
                 if (prevState != inputCode)
                 {
                     wiring = false;
-                    int numIn = compType.GetNumInputs();
-                    if (compType != null && compType.TakesInput() && (numIn == -1 || inputs.Count < numIn))
+                    if (compType != null && compType.TakesInput())
                     {
                         CreateWire();
                     }
@@ -137,19 +152,6 @@ public class CircuitComponent : MonoBehaviour
             if (compType == null)
                 meshRenderer.material.SetColor("_Color", slotColor);
         }
-
-        int rIndex = -1;
-        foreach (WireVector wv in inputs)
-        {
-            if (!wv.CheckSource())
-            {
-                Destroy(wv.GetWire());
-                rIndex = inputs.IndexOf(wv);
-            }
-        }
-
-        if (rIndex > -1)
-            inputs.RemoveAt(rIndex);
     }
 
     private void UpdateTexture()
@@ -174,10 +176,23 @@ public class CircuitComponent : MonoBehaviour
 
         if (compType == null)
         {
-            foreach (WireVector wv in inputs)
-                Destroy(wv.GetWire());
+            inputs = new CircuitComponent[0];
+            wires = new GameObject[0];
 
-            inputs.Clear();
+            foreach (Transform child in transform)
+                Destroy(child.gameObject);
+        }
+        else
+        {
+            int numIn = compType.GetNumInputs();
+            numIn = numIn == -1 ? 26 : numIn;
+            inputs = new CircuitComponent[numIn];
+            wires = new GameObject[numIn];
+            for (int i = 0; i < inputs.Length; i++)
+            {
+                inputs[i] = null;  // TODO: allow copying over wire connections?
+                wires[i] = null;
+            }
         }
 
         UpdateTexture();
@@ -185,40 +200,43 @@ public class CircuitComponent : MonoBehaviour
 
     public bool GetOutput()
     {
-        if (compType == null || (compType != CompType.COMP_DRAIN && !compType.HasOutput()))
+        if (compType == null || (compType != CompType.DRAIN && !compType.HasOutput()))
             return false;
 
-        if (compType == CompType.COMP_BUTTON)
+        if (compType == CompType.BUTTON)
             return state;
 
-        bool[] in_vals = new bool[inputs.Count];
+        bool[] in_vals = new bool[inputs.Length];
 
-        for (int i = 0; i < inputs.Count; i++)
+        for (int i = 0; i < inputs.Length; i++)
         {
-            in_vals[i] = (inputs[i] as WireVector).GetOutput();
+            if (inputs[i] == null)
+                in_vals[i] = false;
+            else
+                in_vals[i] = inputs[i].GetOutput();
         }
 
         bool output = false;
 
-        if (compType == CompType.COMP_LED || compType == CompType.COMP_OR || compType == CompType.COMP_BUFFER ||
-            compType == CompType.COMP_NOR || compType == CompType.COMP_NOT)
+        if (compType == CompType.LED || compType == CompType.OR || compType == CompType.BUFFER ||
+            compType == CompType.NOR || compType == CompType.NOT)
         {
             for (int i = 0; i < in_vals.Length; i++)
                 output |= in_vals[i];
 
-            if (compType == CompType.COMP_NOR || compType == CompType.COMP_NOT)
+            if (compType == CompType.NOR || compType == CompType.NOT)
                 output = !output;
         }
-        else if (compType == CompType.COMP_AND || compType == CompType.COMP_NAND)
+        else if (compType == CompType.AND || compType == CompType.NAND)
         {
             output = in_vals.Length > 0;
             for (int i = 0; i < in_vals.Length; i++)
                 output &= in_vals[i];
 
-            if (compType == CompType.COMP_NAND)
+            if (compType == CompType.NAND)
                 output = !output;
         }
-        else if (compType == CompType.COMP_XOR || compType == CompType.COMP_XNOR)
+        else if (compType == CompType.XOR || compType == CompType.XNOR)
         {
             for (int i = 0; i < in_vals.Length; i++)
                 if (i == 0)
@@ -226,7 +244,7 @@ public class CircuitComponent : MonoBehaviour
                 else if (i == 1)
                     output ^= in_vals[i];
 
-            if (compType == CompType.COMP_XNOR)
+            if (compType == CompType.XNOR)
                 output = !output;
         }
 
@@ -238,12 +256,18 @@ public class CircuitComponent : MonoBehaviour
     private void CreateWire()
     {
         DragWire();
-        Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
-        
-        CircuitComponent input = wireStartObj.GetComponent<CircuitComponent>();
-        Vector2 sourcePos = new Vector2(wireStartObj.transform.position.x, wireStartObj.transform.position.y);
-        wireEndObj.GetComponent<CircuitComponent>().AddInput(input, sourcePos);
+
+        if (wireEndObj.GetComponent<CircuitComponent>().GetCompType() != CompType.DRAIN)
+            gameObject.transform.parent.gameObject.GetComponent<Board>().OpenWireUI(wireStartObj, wireEndObj, wire);
+        else
+        {
+            CircuitComponent input = wireStartObj.GetComponent<CircuitComponent>();
+            wireEndObj.GetComponent<CircuitComponent>().SetInput(-1, input);
+            wire.transform.parent = wireEndObj.transform;
+        }
+
         wireEndObj = null;
+        wireStartObj = null;
     }
 
     private void DragWire()
@@ -266,7 +290,7 @@ public class CircuitComponent : MonoBehaviour
         float offsY = r * (float)Math.Sin(theta);
         float x = startX + 0.5f * scaledWidth * offsX;
         float y = startY + 0.5f * scaledWidth * offsY;
-        float z = -0.55f;
+        float z = -0.475f;
 
         wire.transform.localScale = new Vector3(wire.transform.localScale.x, scaledWidth, wire.transform.localScale.z);
         wire.transform.eulerAngles = new Vector3(0, 0, rot);
@@ -283,9 +307,43 @@ public class CircuitComponent : MonoBehaviour
         hover = false;
     }
 
-    public void AddInput(CircuitComponent input, Vector2 sourcePos)
+    public void SetInput(int index, CircuitComponent input)
     {
-        inputs.Add(new WireVector(input, wire, sourcePos));
+        if (index >= 0)
+        {
+            if (wires[index] != null)
+                Destroy(wires[index]);
+
+            inputs[index] = input;
+            wires[index] = wire;
+        }
+        else
+        {
+            int add_index = 0;
+            for (int i = 0; i < inputs.Length; i++)
+                if (inputs[i] == null)
+                {
+                    add_index = i;
+                    break;
+                }
+
+            if (wires[add_index] != null)
+                Destroy(wires[add_index]);
+
+            inputs[add_index] = input;
+            wires[add_index] = wire;
+        }
+    }
+
+    public void RemoveWire(int index)
+    {
+        Destroy(wires[index]);
+        wires[index] = null;
+    }
+
+    public CircuitComponent[] GetInputs()
+    {
+        return inputs;
     }
 
     public CompType GetCompType()

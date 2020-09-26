@@ -9,14 +9,14 @@ using UnityEngine.UI;
 
 public class UIControl : MonoBehaviour
 {
-    private const string TITLE = "Techne v 1.0_alpha";
+    private const string TITLE = "Techne Alpha";
 
     public GameObject[] buttons;
     public Text selLabel;
     public Text titleLabel;
 
     private KeyCode[] hotbarKeys;
-    
+
     private int selIndex;
 
     public void Start()
@@ -82,13 +82,14 @@ public class UIControl : MonoBehaviour
                         Select(index + 1);
                 }
             }
-        
     }
 
     private void Select(int index)
     {
         if (index < 0 || index >= buttons.Length)
             return;
+
+        buttons[selIndex].GetComponent<Image>().sprite = CompType.GetCompTypeByName(buttons[selIndex].name.Split('_')[1]).GetSprite(false);
 
         EventSystem.current.SetSelectedGameObject(buttons[index]);
         CompType comp = CompType.GetCompTypeByName(buttons[index].name.Split('_')[1]);
@@ -97,7 +98,7 @@ public class UIControl : MonoBehaviour
             CircuitComponent.selType = comp;
             selLabel.text = EventSystem.current.currentSelectedGameObject.name.Split('_')[1];
         }
-
+        buttons[index].GetComponent<Image>().sprite = comp.GetSprite(true);
         selIndex = index;
     }
 }

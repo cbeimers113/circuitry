@@ -5,17 +5,17 @@ public class CompType
 {
     public static ArrayList components = new ArrayList();
     
-    public static readonly CompType COMP_DRAIN = new CompType("DRAIN", false, true, false, -1);
-    public static readonly CompType COMP_BUTTON = new CompType("BUTTON", true, false, true, 0);
-    public static readonly CompType COMP_LED = new CompType("LED", true, true, false, 1);
-    public static readonly CompType COMP_AND = new CompType("AND", true, true, false, 2);
-    public static readonly CompType COMP_OR = new CompType("OR", true, true, false, 2);
-    public static readonly CompType COMP_XOR = new CompType("XOR", true, true, false, 2);
-    public static readonly CompType COMP_BUFFER = new CompType("BUFFER", true, true, false, -1);
-    public static readonly CompType COMP_NAND = new CompType("NAND", true, true, false, 2);
-    public static readonly CompType COMP_NOR = new CompType("NOR", true, true, false, 2);
-    public static readonly CompType COMP_XNOR = new CompType("XNOR", true, true, false, 2);
-    public static readonly CompType COMP_NOT = new CompType("NOT", true, true, false, 1);
+    public static readonly CompType DRAIN = new CompType("DRAIN", false, true, false, -1);
+    public static readonly CompType BUTTON = new CompType("BUTTON", true, false, true, 0);
+    public static readonly CompType LED = new CompType("LED", true, true, false, 1);
+    public static readonly CompType AND = new CompType("AND", true, true, false, 2);
+    public static readonly CompType OR = new CompType("OR", true, true, false, 2);
+    public static readonly CompType XOR = new CompType("XOR", true, true, false, 2);
+    public static readonly CompType BUFFER = new CompType("BUFFER", true, true, false, -1);
+    public static readonly CompType NAND = new CompType("NAND", true, true, false, 2);
+    public static readonly CompType NOR = new CompType("NOR", true, true, false, 2);
+    public static readonly CompType XNOR = new CompType("XNOR", true, true, false, 2);
+    public static readonly CompType NOT = new CompType("NOT", true, true, false, 1);
 
     private string c_name;
     private bool has_output;

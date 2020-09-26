@@ -49,6 +49,9 @@ public class CameraControl : MonoBehaviour
 
     void Update()
     {
+        if (GameObject.FindGameObjectWithTag("EditBoard").GetComponent<Board>().IsUIOpen())
+            return;
+
         float x = transform.position.x;
         float y = transform.position.y;
         float z = Mathf.SmoothStep(transform.position.z, scroll, (Time.time - startTimeScroll) / 2.0f);
