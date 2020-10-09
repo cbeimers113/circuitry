@@ -24,11 +24,11 @@ jobs:
         - name: Archive Windows Build
           uses: actions/upload-artifact@v1
           with:
-            name: CISampleWin64Binary
+            name: Techne_CI_Win64
             path: ./bin-win64
 
         - name: Archive Mac Build
           uses: actions/upload-artifact@v1
           with:
-            name: CISampleOSXBinary
+            name: Techne_CI_OSX
             path: ./bin-osx

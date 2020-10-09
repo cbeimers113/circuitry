@@ -2,10 +2,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
-
 public class Board : MonoBehaviour
 {
     public const int DEF_WIDTH = 20;
@@ -225,7 +221,7 @@ public class Board : MonoBehaviour
     {
         string save_dir = Application.persistentDataPath;
         System.IO.Directory.CreateDirectory(save_dir);
-        string save_path = EditorUtility.SaveFilePanel("Save Circuit Board", save_dir, "board.brd", "brd");
+        string save_path = "";
 
         using (System.IO.StreamWriter file = new System.IO.StreamWriter(@save_path))
         {
@@ -257,7 +253,7 @@ public class Board : MonoBehaviour
     {
         string load_dir = Application.persistentDataPath;
         System.IO.Directory.CreateDirectory(load_dir);
-        string load_path = EditorUtility.OpenFilePanel("Load Circuit Board", load_dir, "brd");
+        string load_path = "";
 
         using (System.IO.StreamReader file = new System.IO.StreamReader(@load_path))
         {
