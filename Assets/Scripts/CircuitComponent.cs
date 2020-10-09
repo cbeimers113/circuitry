@@ -22,7 +22,10 @@ public class CircuitComponent : MonoBehaviour
     public static GameObject wire;
 
     private static bool wiring;
+
     private static float wireWidth;
+    public static float wireXOffs;
+    public static float wireYOffs;
 
     private CircuitComponent[] inputs;
     private GameObject[] wires;
@@ -308,8 +311,8 @@ public class CircuitComponent : MonoBehaviour
         if (wireEndObj == null || wire == null)
             return;
 
-        float startX = wireStartObj.transform.position.x;
-        float startY = wireStartObj.transform.position.y;
+        float startX = wireStartObj.transform.position.x + wireXOffs;
+        float startY = wireStartObj.transform.position.y + wireYOffs;
         float endX = wireEndObj.transform.position.x;
         float endY = wireEndObj.transform.position.y;
         float deltaX = startX - endX;
