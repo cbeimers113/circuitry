@@ -9,6 +9,7 @@ public class CircuitComponent : MonoBehaviour
     public static Material compMaterial;
     public static Color slotColor;
     public static Color slotHoverColor;
+    private static ArrayList tracked;
 
     private static InputControl.InputCode inputCode;
     private static InputControl.InputCode prevState;
@@ -17,9 +18,9 @@ public class CircuitComponent : MonoBehaviour
     private static Texture2D wireEndTexture;
     private static GameObject mainCam;
     public static CompType selType;
-    private static GameObject wireStartObj;
-    private static GameObject wireEndObj;
-    private static GameObject wire;
+    public static GameObject wireStartObj;
+    public static GameObject wireEndObj;
+    public static GameObject wire;
 
     private static bool wiring;
     private static float wireWidth;
@@ -28,10 +29,17 @@ public class CircuitComponent : MonoBehaviour
     private GameObject[] wires;
     private MeshRenderer meshRenderer;
     private CompType compType;
+    private Board board;
 
     private bool toggled;
     private bool hover;
     private bool state;
+
+    private int x;
+    private int y;
+
+    private int clock;
+    private int clockTime;
 
     public void Start()
     {
@@ -48,18 +56,23 @@ public class CircuitComponent : MonoBehaviour
         state = false;
         inputs = new CircuitComponent[0];
         wires = new GameObject[0];
+        board = transform.parent.gameObject.GetComponent<Board>();
+        clockTime = 50;
     }
 
     public void Update()
     {
-        if (MouseInputUIBlocker.BlockedByUI || GameObject.FindGameObjectWithTag("EditBoard").GetComponent<Board>().IsUIOpen())
+        if (MouseInputUIBlocker.BlockedByUI || board.IsUIOpen())
         {
             Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
             return;
         }
 
-        if (compType == CompType.DRAIN)
-            GetOutput();
+        if (compType == CompType.OUTPUT)
+        {
+            tracked = new ArrayList();
+            state = GetOutput();
+        }
 
         for (int i = 0; i < inputs.Length; i++)
             if (inputs[i] != null && inputs[i].compType == null)
@@ -84,7 +97,7 @@ public class CircuitComponent : MonoBehaviour
                 if (prevState != inputCode)
                 {
                     wiring = false;
-                    if (compType != null && compType.TakesInput())
+                    if (compType != null && wireStartObj != this && compType.TakesInput())
                     {
                         CreateWire();
                     }
@@ -139,7 +152,11 @@ public class CircuitComponent : MonoBehaviour
                 case InputControl.InputCode.SHIFT_MIDDLE_CLICK:
                     float x = transform.position.x;
                     float y = transform.position.y;
-                    mainCam.GetComponent<CameraControl>().ZoomTo(x, y);
+                    mainCam.GetComponent<CameraControl>().FocusOn(x, y);
+                    break;
+                case InputControl.InputCode.CONTROL_LEFT_CLICK:
+                    if (compType != null && compType.TakesInput())
+                        board.OpenDebugUI(this);
                     break;
                 default:
                     break;
@@ -170,7 +187,7 @@ public class CircuitComponent : MonoBehaviour
         Resources.UnloadUnusedAssets();
     }
 
-    private void SetType(CompType compType)
+    public void SetType(CompType compType)
     {
         this.compType = compType;
 
@@ -200,11 +217,16 @@ public class CircuitComponent : MonoBehaviour
 
     public bool GetOutput()
     {
-        if (compType == null || (compType != CompType.DRAIN && !compType.HasOutput()))
+        if (compType == null || (compType != CompType.OUTPUT && !compType.HasOutput()))
             return false;
 
         if (compType == CompType.BUTTON)
             return state;
+
+        if (tracked.Contains(this))
+            return state;
+
+        tracked.Add(this);
 
         bool[] in_vals = new bool[inputs.Length];
 
@@ -219,7 +241,7 @@ public class CircuitComponent : MonoBehaviour
         bool output = false;
 
         if (compType == CompType.LED || compType == CompType.OR || compType == CompType.BUFFER ||
-            compType == CompType.NOR || compType == CompType.NOT)
+            compType == CompType.NOR || compType == CompType.NOT || compType == CompType.OUTPUT)
         {
             for (int i = 0; i < in_vals.Length; i++)
                 output |= in_vals[i];
@@ -247,18 +269,30 @@ public class CircuitComponent : MonoBehaviour
             if (compType == CompType.XNOR)
                 output = !output;
         }
+        else if (compType == CompType.CLOCK)
+        {
+            clock++;
+            output = state;
+
+            if (clock == clockTime)
+            {
+                if (!in_vals[0])
+                    output = !state;
+                clock = 0;
+            }
+        }
 
         state = output;
         UpdateTexture();
         return state;
     }
 
-    private void CreateWire()
+    public void CreateWire()
     {
         DragWire();
 
-        if (wireEndObj.GetComponent<CircuitComponent>().GetCompType() != CompType.DRAIN)
-            gameObject.transform.parent.gameObject.GetComponent<Board>().OpenWireUI(wireStartObj, wireEndObj, wire);
+        if (wireEndObj.GetComponent<CircuitComponent>().GetCompType() != CompType.OUTPUT)
+            board.OpenWireUI(wireStartObj, wireEndObj, wire);
         else
         {
             CircuitComponent input = wireStartObj.GetComponent<CircuitComponent>();
@@ -270,7 +304,7 @@ public class CircuitComponent : MonoBehaviour
         wireStartObj = null;
     }
 
-    private void DragWire()
+    public void DragWire()
     {
         if (wireEndObj == null || wire == null)
             return;
@@ -349,5 +383,30 @@ public class CircuitComponent : MonoBehaviour
     public CompType GetCompType()
     {
         return compType;
+    }
+
+    public bool GetState()
+    {
+        return state;
+    }
+
+    public void SetX(int x)
+    {
+        this.x = x;
+    }
+
+    public void SetY(int y)
+    {
+        this.y = y;
+    }
+
+    public int GetX()
+    {
+        return x;
+    }
+
+    public int GetY()
+    {
+        return y;
     }
 }

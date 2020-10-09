@@ -44,7 +44,9 @@ public class UIControl : MonoBehaviour
             KeyCode.Alpha7,
             KeyCode.Alpha8,
             KeyCode.Alpha9,
-            KeyCode.Alpha0
+            KeyCode.Alpha0,
+            KeyCode.Minus,
+            KeyCode.Equals
         };
 
         Select(0);

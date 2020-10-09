@@ -1,57 +1,75 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEditor;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class Board : MonoBehaviour
 {
-    public const int WIDTH = 20;
-    public const int HEIGHT = 10;
+    public const int DEF_WIDTH = 20;
+    public const int DEF_HEIGHT = 10;
 
     private const float SLOT_SIZE = 0.95f;
 
     public GameObject wireUI;
     public GameObject overwriteUI;
+    public GameObject debugUI;
+    public GameObject debugConnTo;
+
     private GameObject[,] components;
     private GameObject wireStartObj;
     private GameObject wireEndObj;
     private GameObject wire;
+    private Dropdown debugConns;
+    private CircuitComponent debugComp;
+
+    private int width;
+    private int height;
 
     private bool uiOpen;
 
     void Start()
     {
+        width = DEF_WIDTH;
+        height = DEF_HEIGHT;
+
+        Material compMaterial = Resources.Load("Materials/compSlot", typeof(Material)) as Material;
         CircuitComponent.slotMaterial = Resources.Load("Materials/compSlot", typeof(Material)) as Material;
         CircuitComponent.compMaterial = Resources.Load("Materials/component", typeof(Material)) as Material;
         CircuitComponent.slotColor = new Color(1f, 1f, 1f, 0.5f);
         CircuitComponent.slotHoverColor = new Color(1f, 1f, 1f, 1f);
 
-        transform.localScale = new Vector3(WIDTH, HEIGHT, 1);
-        transform.position = new Vector3(WIDTH / 2, HEIGHT / 2, 0);
-        Material compMaterial = Resources.Load("Materials/compSlot", typeof(Material)) as Material;
-        components = new GameObject[WIDTH, HEIGHT];
+        transform.localScale = new Vector3(GetWidth(), GetHeight(), 1);
+        transform.position = new Vector3(GetWidth() / 2, GetHeight() / 2, 0);
+        components = new GameObject[GetWidth(), GetHeight()];
 
-        for (int y = 0; y < HEIGHT; y++)
-            for (int x = 0; x < WIDTH; x++)
+        for (int y = 0; y < GetHeight(); y++)
+            for (int x = 0; x < GetWidth(); x++)
             {
                 GameObject component = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 component.name = "c(" + x + ", " + y + ")";
                 component.transform.localScale = new Vector3(SLOT_SIZE, SLOT_SIZE, 1);
                 component.transform.position = new Vector3(x + 0.5f, y + 0.5f, -0.026f);
                 component.transform.eulerAngles = new Vector3(0, 0, 180);
+                component.transform.parent = transform;
                 component.GetComponent<MeshRenderer>().material = compMaterial;
                 component.GetComponent<MeshRenderer>().material.SetColor("_Color", new Color(0.5f, 0.5f, 0.5f, 0.5f));
-                component.AddComponent<CircuitComponent>();
-                component.transform.parent = transform;
+
+                CircuitComponent comp = component.AddComponent<CircuitComponent>();
+                comp.SetX(x);
+                comp.SetY(y);
+
                 components[x, y] = component;
             }
 
         gameObject.tag = "EditBoard";
         wireUI.SetActive(false);
         overwriteUI.SetActive(false);
+        debugUI.SetActive(false);
     }
 
     public CircuitComponent GetCompAt(int x, int y)
     {
-        if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT)
+        if (x < 0 || x >= GetWidth() || y < 0 || y >= GetHeight())
             return null;
 
         return components[x, y].GetComponent<CircuitComponent>();
@@ -59,12 +77,12 @@ public class Board : MonoBehaviour
 
     public int GetWidth()
     {
-        return WIDTH;
+        return width;
     }
 
     public int GetHeight()
     {
-        return HEIGHT;
+        return height;
     }
 
     public void OpenWireUI(GameObject wireStartObj, GameObject wireEndObj, GameObject wire)
@@ -106,6 +124,50 @@ public class Board : MonoBehaviour
         wireUI.SetActive(false);
     }
 
+    public void OpenDebugUI(CircuitComponent comp)
+    {
+        debugComp = comp;
+        uiOpen = true;
+        debugUI.SetActive(true);
+        debugConns = GameObject.Find("DebugConns").GetComponent<Dropdown>();
+        GameObject.Find("DebugComp").GetComponent<Image>().sprite = debugComp.GetCompType().GetSprite(false);
+        GameObject.Find("DebugName").GetComponent<Text>().text = debugComp.GetCompType().GetName();
+        GameObject.Find("DebugCompState").GetComponent<Text>().text = debugComp.GetState() ? "HI" : "LO";
+        GameObject.Find("DebugCompState").GetComponent<Text>().color = debugComp.GetState() ? Color.green : Color.red;
+
+        debugConns.options.Clear();
+        string alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+        for (int i = 0; i < debugComp.GetInputs().Length; i++)
+            debugConns.options.Add(new Dropdown.OptionData() { text = "" + alpha.ToCharArray()[i] });
+
+        for (int i = 1; i > -1; i--)
+            debugConns.value = i;
+
+        OnDebugConnsDropdownChanged();
+    }
+
+    public void OnDebugConnsDropdownChanged()
+    {
+        CircuitComponent input = debugComp.GetInputs()[debugConns.value];
+
+        if (input == null)
+        {
+            debugConnTo.SetActive(false);
+        }
+        else
+        {
+            CompType selComp = input.GetCompType();
+            debugConnTo.SetActive(true);
+            debugConnTo.GetComponent<Image>().sprite = selComp.GetSprite(debugComp.GetState());
+        }
+    }
+
+    public void CloseDebugUI()
+    {
+        uiOpen = false;
+        debugUI.SetActive(false);
+    }
 
     public bool IsUIOpen()
     {
@@ -149,5 +211,92 @@ public class Board : MonoBehaviour
         wireEndObj.GetComponent<CircuitComponent>().SetInput(GameObject.Find("DestInputs").GetComponent<Dropdown>().value, input);
         wire.transform.parent = wireEndObj.transform;
         CloseWireUI();
+    }
+
+    public void OpenBoardSettingsUI()
+    {
+
+    }
+
+    public void Save()
+    {
+        string save_dir = Application.persistentDataPath;
+        System.IO.Directory.CreateDirectory(save_dir);
+        string save_path = EditorUtility.SaveFilePanel("Save Circuit Board", save_dir, "board.brd", "brd");
+
+        using (System.IO.StreamWriter file = new System.IO.StreamWriter(@save_path))
+        {
+            file.WriteLine("w." + GetWidth());
+            file.WriteLine("h." + GetHeight());
+
+            for (int y = 0; y < GetHeight(); y++)
+                for (int x = 0; x < GetWidth(); x++)
+                {
+                    CircuitComponent comp = components[x, y].GetComponent<CircuitComponent>();
+                    if (comp.GetCompType() != null)
+                    {
+                        string input_string = "";
+                        CircuitComponent[] inputs = comp.GetInputs();
+
+                        for (int i = 0; i < inputs.Length; i++)
+                        {
+                            string inp_type = inputs[i] == null ? "_" : inputs[i].GetX() + "-" + inputs[i].GetY();
+                            input_string += i + ":" + inp_type + (i == inputs.Length - 1 ? "" : ",");
+                        }
+
+                        file.WriteLine(comp.GetCompType().GetName() + "." + x + "." + y + "." + input_string);
+                    }
+                }
+        }
+    }
+
+    public void Load()
+    {
+        string load_dir = Application.persistentDataPath;
+        System.IO.Directory.CreateDirectory(load_dir);
+        string load_path = EditorUtility.OpenFilePanel("Load Circuit Board", load_dir, "brd");
+
+        using (System.IO.StreamReader file = new System.IO.StreamReader(@load_path))
+        {
+            string line;
+            while ((line = file.ReadLine()) != null)
+            {
+                string[] data = line.Split('.');
+                if (data[0] == "w")
+                    width = Int32.Parse(data[1]);
+                else if (data[0] == "h")
+                    height = Int32.Parse(data[1]);
+                else
+                {
+                    CompType placeType = CompType.GetCompTypeByName(data[0]);
+                    int x = Int32.Parse(data[1]);
+                    int y = Int32.Parse(data[2]);
+                    components[x, y].GetComponent<CircuitComponent>().SetType(placeType);
+
+                    if (data.Length == 4 && data[3] != "")
+                    {
+                        string[] connData = data[3].Split(',');
+                        
+                        foreach (string datum in connData)
+                        {
+                            int index = Int32.Parse(datum.Split(':')[0]);
+
+                            if (datum.Split(':')[1] != "_")
+                            {
+                                string[] pos = datum.Split(':')[1].Split('-');
+                                CircuitComponent.wire = Instantiate(Resources.Load<GameObject>("Prefabs/Wire"));
+                                CircuitComponent.wireStartObj = components[Int32.Parse(pos[0]), Int32.Parse(pos[1])];
+                                CircuitComponent.wireEndObj = components[x, y];
+                                components[x, y].GetComponent<CircuitComponent>().DragWire();
+                                
+                                CircuitComponent input = CircuitComponent.wireStartObj.GetComponent<CircuitComponent>();
+                                CircuitComponent.wireEndObj.GetComponent<CircuitComponent>().SetInput(index, input);
+                                CircuitComponent.wire.transform.parent = CircuitComponent.wireEndObj.transform;
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

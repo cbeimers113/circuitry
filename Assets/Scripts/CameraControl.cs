@@ -7,34 +7,30 @@ public class CameraControl : MonoBehaviour
     private float scrollMax;
     private float startTimeScroll;
     private float startTimeZoom;
-
-    private int dragSpeed;
-    private int dragSpeedMin;
-    private int dragSpeedMax;
-
     private float xMin;
     private float xMax;
     private float yMin;
     private float yMax;
-
     private float targetX;
     private float targetY;
+    private float dragSpeed;
 
     private bool dragging;
     private bool shift;
     private bool zooming;
 
+
+    private Vector3 lastPosition;
+
     void Start()
     {
         scroll = -10;
-        scrollMin = -12;
+        scrollMin = -32;
         scrollMax = -2;
         startTimeScroll = Time.time;
         startTimeZoom = Time.time;
-        dragSpeedMin = 5;
-        dragSpeedMax = 25;
-        dragSpeed = GetDragSpeed();
-        dragging = false;
+        dragSpeed = 0.01f;
+
         shift = false;
         zooming = false;
 
@@ -45,13 +41,14 @@ public class CameraControl : MonoBehaviour
         xMax = b_width * 2 - 0.5f;
         yMin = 0.5f - b_height / 2;
         yMax = b_height * 2 - 0.5f;
+        lastPosition = Vector3.zero;
     }
 
     void Update()
     {
         if (GameObject.FindGameObjectWithTag("EditBoard").GetComponent<Board>().IsUIOpen())
             return;
-
+       
         float x = transform.position.x;
         float y = transform.position.y;
         float z = Mathf.SmoothStep(transform.position.z, scroll, (Time.time - startTimeScroll) / 2.0f);
@@ -83,12 +80,7 @@ public class CameraControl : MonoBehaviour
 
         if (dragging)
         {
-            float xOffs = Input.GetAxis("Mouse X") * dragSpeed * Time.deltaTime;
-            float yOffs = Input.GetAxis("Mouse Y") * dragSpeed * Time.deltaTime;
-            float x_target = x - xOffs;
-            float y_target = y - yOffs;
-            if (x_target >= xMin && x_target <= xMax && y_target >= yMin && y_target <= yMax)
-                transform.position = new Vector3(x_target, y_target, z);
+            ScreenPan();
         }
 
         if (zooming)
@@ -107,6 +99,8 @@ public class CameraControl : MonoBehaviour
         {
             dragging = false;
         }
+
+        lastPosition = Input.mousePosition;
     }
 
     private void Zoom(bool dir)
@@ -114,19 +108,18 @@ public class CameraControl : MonoBehaviour
         //dir: true=in, false=out
         scroll += dir ? 1 : -1;
         startTimeScroll = Time.time;
-        dragSpeed = GetDragSpeed();
     }
 
-    private int GetDragSpeed()
-    {
-        return dragSpeedMin + (int)((float)(dragSpeedMax - dragSpeedMin) * (1.0f - ((float)(scroll - scrollMin) / (float)(scrollMax - scrollMin))));
-    }
-
-    public void ZoomTo(float x, float y)
+    public void FocusOn(float x, float y)
     {
         targetX = x;
         targetY = y;
         zooming = true;
         startTimeZoom = Time.time;
+    }
+    public void ScreenPan()
+    {
+        Vector3 delta = lastPosition - Input.mousePosition;
+        transform.Translate(delta.x * dragSpeed, delta.y * dragSpeed, 0);
     }
 }
