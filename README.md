@@ -2,7 +2,7 @@
 # Techne
 
  Techne is a simple-to-use, component-focused electronic circuit simulator created by Chris Beimers.
- Techne can be downloaded [here](Techne.zip).
+ Techne can be downloaded [here](https://github.com/cbeimers113/techne/raw/master/Techne.zip).
 
   
 
