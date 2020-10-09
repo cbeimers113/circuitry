@@ -17,7 +17,7 @@ jobs:
         
         # Build Windows and OSX
         - name: Build Windows Player
-          run: /opt/Unity/Editor/Unity -quit -batchmode -nographics -silent-crashes -logFile -projectPath . -buildWindows64Player ./bin-win64/Techne.exe
+          run: /opt/Unity/Editor/Unity -quit -batchmode -silent-crashes -logFile -projectPath . -buildWindows64Player ./bin-win64/Techne.exe
         - name: Build OSX Player
           run: /opt/Unity/Editor/Unity -quit -batchmode -nographics -silent-crashes -logFile -projectPath . -buildOSXUniversalPlayer ./bin-osx/Techne.app      
         
